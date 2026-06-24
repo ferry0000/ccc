@@ -187,6 +187,10 @@ class OrderServiceTest {
 <br>
 <br>
 <br>
+<br>
+<br>
+<br>
+<br>
 
 できます。**古いJMockitでは `mockit.Deencapsulation.invoke(...)` を使って private メソッドを直接呼び出せました。**
 
