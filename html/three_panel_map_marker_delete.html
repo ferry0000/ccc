@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>マーカー削除対応 3分割地図ツール</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
+  >
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      color: #222;
+      background: #f5f6f8;
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app-layout {
+      --left-panel-width: 500px;
+      --right-panel-width: 430px;
+      display: grid;
+      grid-template-columns:
+        minmax(320px, var(--left-panel-width))
+        10px
+        minmax(320px, 1fr)
+        10px
+        minmax(360px, var(--right-panel-width));
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .side-column {
+      height: 100vh;
+      padding: 16px;
+      overflow-y: auto;
+      background: #f5f6f8;
+    }
+
+    .left-controls {
+      border-right: 1px solid #e1e5ea;
+    }
+
+    .right-controls {
+      border-left: 1px solid #e1e5ea;
+    }
+
+    .map-column {
+      min-width: 0;
+      height: 100vh;
+    }
+
+    .resize-handle {
+      height: 100vh;
+      cursor: col-resize;
+      touch-action: none;
+      user-select: none;
+      background:
+        linear-gradient(
+          to right,
+          transparent 2px,
+          #c5cbd4 2px,
+          #c5cbd4 8px,
+          transparent 8px
+        );
+    }
+
+    .resize-handle:hover,
+    .resize-handle.is-dragging {
+      background:
+        linear-gradient(
+          to right,
+          transparent 1px,
+          #2563eb 1px,
+          #2563eb 9px,
+          transparent 9px
+        );
+    }
+
+    body.is-resizing {
+      cursor: col-resize;
+      user-select: none;
+    }
+
+    h1 {
+      margin: 0 0 16px;
+      font-size: 1.45rem;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 1.08rem;
+    }
+
+    .panel {
+      padding: 14px;
+      margin-bottom: 14px;
+      border: 1px solid #d9dde3;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .point-list,
+    .distance-pair-list,
+    .circle-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .point-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 10px;
+      align-items: end;
+      padding: 11px;
+      border: 1px solid #e1e5ea;
+      border-radius: 8px;
+      background: #fafbfc;
+    }
+
+    .distance-pair-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 10px;
+      align-items: end;
+      padding: 11px;
+      border: 1px solid #dbe3f0;
+      border-radius: 8px;
+      background: #f8fbff;
+    }
+
+    .circle-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 10px;
+      align-items: end;
+      padding: 11px;
+      border: 1px solid #d7eadf;
+      border-radius: 8px;
+      background: #f6fcf8;
+    }
+
+    .point-row .label-field,
+    .point-row .coordinate-format-field,
+    .point-row .remove-button,
+    .distance-pair-row .remove-button,
+    .distance-pair-row .result-box,
+    .circle-row .remove-button,
+    .circle-row .result-box {
+      grid-column: 1 / -1;
+    }
+
+    .point-row .remove-button,
+    .distance-pair-row .remove-button,
+    .circle-row .remove-button {
+      width: 100%;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    label {
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    input,
+    select {
+      width: 100%;
+      min-width: 0;
+      padding: 9px 10px;
+      border: 1px solid #b8bec7;
+      border-radius: 6px;
+      background: #fff;
+      font-size: 0.92rem;
+    }
+
+    input:focus,
+    select:focus {
+      outline: 2px solid #4c8bf5;
+      outline-offset: 1px;
+      border-color: #4c8bf5;
+    }
+
+    .checkbox-field {
+      justify-content: end;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 9px 10px;
+      border: 1px solid #b8bec7;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .checkbox-label input {
+      width: auto;
+      margin: 0;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 12px;
+    }
+
+    button {
+      min-height: 39px;
+      padding: 9px 14px;
+      border: 0;
+      border-radius: 6px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .primary {
+      color: #fff;
+      background: #2563eb;
+    }
+
+    .primary:hover {
+      background: #1d4ed8;
+    }
+
+    .secondary {
+      color: #1f2937;
+      background: #e5e7eb;
+    }
+
+    .secondary:hover {
+      background: #d1d5db;
+    }
+
+    .danger {
+      color: #fff;
+      background: #b91c1c;
+    }
+
+    .danger:hover {
+      background: #991b1b;
+    }
+
+    .remove-button {
+      white-space: nowrap;
+    }
+
+    .result-box {
+      min-height: 40px;
+      padding: 9px 10px;
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      background: #eef4ff;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .circle-result {
+      border-color: #bbdfc8;
+      background: #effaf3;
+    }
+
+    .result-box.error {
+      color: #b91c1c;
+      border-color: #fecdd3;
+      background: #fff1f2;
+    }
+
+    .message {
+      min-height: 1.35em;
+      margin: 10px 0 0;
+      font-size: 0.9rem;
+    }
+
+    .message.error {
+      color: #b91c1c;
+    }
+
+    .message.success {
+      color: #166534;
+    }
+
+    #map {
+      width: 100%;
+      height: 100vh;
+      background: #ddd;
+    }
+
+    .note {
+      margin: 4px 2px 0;
+      color: #5f6670;
+      font-size: 0.82rem;
+      line-height: 1.55;
+    }
+
+    .distance-label {
+      padding: 4px 7px;
+      border-radius: 5px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    }
+
+    .marker-popup {
+      min-width: 210px;
+      line-height: 1.55;
+    }
+
+    .marker-popup-title {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 1rem;
+    }
+
+    .marker-delete-button {
+      width: 100%;
+      min-height: 34px;
+      margin-top: 9px;
+      padding: 7px 10px;
+      border: 0;
+      border-radius: 6px;
+      color: #fff;
+      background: #b91c1c;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .marker-delete-button:hover {
+      background: #991b1b;
+    }
+
+    @media (max-width: 1100px) {
+      body {
+        overflow: auto;
+      }
+
+      .app-layout {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: auto;
+      }
+
+      .side-column {
+        width: 100%;
+        height: auto;
+        overflow: visible;
+        padding: 12px;
+        border: 0;
+      }
+
+      .left-controls {
+        order: 1;
+      }
+
+      .map-column {
+        order: 2;
+        width: 100%;
+        height: auto;
+      }
+
+      .right-controls {
+        order: 3;
+      }
+
+      .resize-handle {
+        display: none;
+      }
+
+      #map {
+        height: 68vh;
+        min-height: 430px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .point-row,
+      .distance-pair-row,
+      .circle-row {
+        grid-template-columns: 1fr;
+      }
+
+      .point-row .label-field,
+      .point-row .coordinate-format-field,
+      .point-row .remove-button,
+      .distance-pair-row .remove-button,
+      .distance-pair-row .result-box,
+      .circle-row .remove-button,
+      .circle-row .result-box {
+        grid-column: auto;
+      }
+
+      .actions button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app-layout">
+    <aside class="side-column left-controls" aria-label="緯度経度の入力">
+      <h1>緯度・経度</h1>
+
+      <section class="panel" aria-label="地点入力">
+        <h2>地点</h2>
+        <div id="pointList" class="point-list"></div>
+
+        <div class="actions">
+          <button id="addPointButton" type="button" class="secondary">地点を追加</button>
+          <button id="showPointsButton" type="button" class="primary">すべての地点を表示</button>
+          <button id="clearPointsButton" type="button" class="danger">すべての地点を削除</button>
+        </div>
+
+        <p id="pointMessage" class="message" aria-live="polite"></p>
+      </section>
+
+      <p class="note">
+        緯度・経度は「10進度」または「秒単位（度数×3600）」で入力できます。
+        例：35.681236度は128452.4496秒です。
+        入力形式を変更すると値を自動変換します。地図クリックでも地点を追加できます。
+        地図上のマーカーをクリックし、「この地点を削除」を押すと地点を削除できます。
+      </p>
+    </aside>
+
+    <div
+      id="leftResizeHandle"
+      class="resize-handle"
+      role="separator"
+      aria-label="左側の緯度経度エリアの横幅を変更"
+      aria-orientation="vertical"
+      tabindex="0"
+    ></div>
+
+    <div class="map-column">
+      <div id="map" aria-label="地図"></div>
+    </div>
+
+    <div
+      id="rightResizeHandle"
+      class="resize-handle"
+      role="separator"
+      aria-label="右側の距離・半径円エリアの横幅を変更"
+      aria-orientation="vertical"
+      tabindex="0"
+    ></div>
+
+    <aside class="side-column right-controls" aria-label="距離と半径円の設定">
+      <h1>距離・半径円</h1>
+
+      <section class="panel" aria-label="距離計算">
+        <h2>2地点間の距離</h2>
+        <div id="distancePairList" class="distance-pair-list"></div>
+
+        <div class="actions">
+          <button id="addPairButton" type="button" class="secondary">距離の組み合わせを追加</button>
+          <button id="calculateAllButton" type="button" class="primary">すべての距離を計算</button>
+          <button id="clearPairsButton" type="button" class="danger">すべての組み合わせを削除</button>
+        </div>
+
+        <p id="distanceMessage" class="message" aria-live="polite"></p>
+      </section>
+
+      <section class="panel" aria-label="半径円表示">
+        <h2>地点を中心とした半径円</h2>
+        <div id="circleList" class="circle-list"></div>
+
+        <div class="actions">
+          <button id="addCircleButton" type="button" class="secondary">円を追加</button>
+          <button id="showCirclesButton" type="button" class="primary">すべての円を表示</button>
+          <button id="clearCirclesButton" type="button" class="danger">すべての円を削除</button>
+        </div>
+
+        <p id="circleMessage" class="message" aria-live="polite"></p>
+      </section>
+
+      <p class="note">
+        距離は道路距離ではなく大円距離です。
+        円は中心地点、半径、単位、内側の表示状態を個別に設定できます。
+      </p>
+    </aside>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+  <script>
+    "use strict";
+
+    const pointList = document.getElementById("pointList");
+    const distancePairList = document.getElementById("distancePairList");
+    const circleList = document.getElementById("circleList");
+
+    const pointMessage = document.getElementById("pointMessage");
+    const distanceMessage = document.getElementById("distanceMessage");
+    const circleMessage = document.getElementById("circleMessage");
+
+    const map = L.map("map").setView([35.681236, 139.767125], 12);
+
+    L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        maxZoom: 19,
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }
+    ).addTo(map);
+
+    const markerLayer = L.layerGroup().addTo(map);
+    const distanceLayer = L.layerGroup().addTo(map);
+    const circleLayer = L.layerGroup().addTo(map);
+
+    const colors = [
+      "#2563eb",
+      "#dc2626",
+      "#16a34a",
+      "#9333ea",
+      "#ea580c",
+      "#0891b2",
+      "#ca8a04",
+      "#be123c"
+    ];
+
+    let pointSequence = 1;
+
+    function setMessage(element, text, type = "") {
+      element.textContent = text;
+      element.className = `message ${type}`.trim();
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function toDecimalDegrees(value, format) {
+      return format === "arcseconds" ? value / 3600 : value;
+    }
+
+    function toArcseconds(valueInDegrees) {
+      return valueInDegrees * 3600;
+    }
+
+    function formatNumber(value, maximumFractionDigits = 10) {
+      return Number(value.toFixed(maximumFractionDigits)).toString();
+    }
+
+    function updateCoordinateInputAppearance(row, format) {
+      const latitudeInput = row.querySelector(".latitude");
+      const longitudeInput = row.querySelector(".longitude");
+      const latitudeLabel = row.querySelector(".latitude-label");
+      const longitudeLabel = row.querySelector(".longitude-label");
+
+      if (format === "arcseconds") {
+        latitudeLabel.textContent = "緯度・秒（-324000 ～ 324000）";
+        longitudeLabel.textContent = "経度・秒（-648000 ～ 648000）";
+
+        latitudeInput.min = "-324000";
+        latitudeInput.max = "324000";
+        latitudeInput.step = "any";
+        latitudeInput.placeholder = "例: 128452.4496";
+
+        longitudeInput.min = "-648000";
+        longitudeInput.max = "648000";
+        longitudeInput.step = "any";
+        longitudeInput.placeholder = "例: 503161.65";
+      } else {
+        latitudeLabel.textContent = "緯度（-90 ～ 90）";
+        longitudeLabel.textContent = "経度（-180 ～ 180）";
+
+        latitudeInput.min = "-90";
+        latitudeInput.max = "90";
+        latitudeInput.step = "any";
+        latitudeInput.placeholder = "例: 35.681236";
+
+        longitudeInput.min = "-180";
+        longitudeInput.max = "180";
+        longitudeInput.step = "any";
+        longitudeInput.placeholder = "例: 139.767125";
+      }
+    }
+
+    function convertCoordinateInputs(row, fromFormat, toFormat) {
+      if (fromFormat === toFormat) return;
+
+      const latitudeInput = row.querySelector(".latitude");
+      const longitudeInput = row.querySelector(".longitude");
+
+      [
+        latitudeInput,
+        longitudeInput
+      ].forEach((input) => {
+        const text = input.value.trim();
+        if (text === "") return;
+
+        const value = Number(text);
+        if (!Number.isFinite(value)) return;
+
+        input.value =
+          toFormat === "arcseconds"
+            ? formatNumber(value * 3600, 6)
+            : formatNumber(value / 3600, 10);
+      });
+    }
+
+    function removePointRow(row, label = "地点") {
+      if (!row || !row.isConnected) {
+        return;
+      }
+
+      row.remove();
+
+      if (pointList.children.length === 0) {
+        createPointRow();
+      }
+
+      displayAllPoints(false);
+
+      setMessage(
+        pointMessage,
+        `${label}を削除しました。`,
+        "success"
+      );
+    }
+
+    function createPointRow(
+      latitude = "",
+      longitude = "",
+      label = "",
+      coordinateFormat = "degrees"
+    ) {
+      const row = document.createElement("div");
+      row.className = "point-row";
+
+      const defaultLabel = label || `地点${pointSequence}`;
+      pointSequence += 1;
+
+      row.innerHTML = `
+        <div class="field label-field">
+          <label>地点名</label>
+          <input
+            type="text"
+            class="point-label"
+            value="${escapeHtml(defaultLabel)}"
+            placeholder="例: 東京駅"
+          >
+        </div>
+
+        <div class="field coordinate-format-field">
+          <label>入力形式</label>
+          <select class="coordinate-format">
+            <option value="degrees">10進度</option>
+            <option value="arcseconds">秒単位（度×3600）</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="latitude-label">緯度（-90 ～ 90）</label>
+          <input
+            type="number"
+            class="latitude"
+            step="any"
+            min="-90"
+            max="90"
+            value="${escapeHtml(latitude)}"
+            placeholder="例: 35.681236"
+          >
+        </div>
+
+        <div class="field">
+          <label class="longitude-label">経度（-180 ～ 180）</label>
+          <input
+            type="number"
+            class="longitude"
+            step="any"
+            min="-180"
+            max="180"
+            value="${escapeHtml(longitude)}"
+            placeholder="例: 139.767125"
+          >
+        </div>
+
+        <button type="button" class="danger remove-button">削除</button>
+      `;
+
+      const formatSelect = row.querySelector(".coordinate-format");
+      formatSelect.value = coordinateFormat;
+      row.dataset.coordinateFormat = coordinateFormat;
+      updateCoordinateInputAppearance(row, coordinateFormat);
+
+      formatSelect.addEventListener("change", () => {
+        const previousFormat =
+          row.dataset.coordinateFormat || "degrees";
+        const nextFormat = formatSelect.value;
+
+        convertCoordinateInputs(row, previousFormat, nextFormat);
+        row.dataset.coordinateFormat = nextFormat;
+        updateCoordinateInputAppearance(row, nextFormat);
+
+        refreshAllSelectors();
+        displayAllPoints();
+      });
+
+      row.querySelector(".remove-button").addEventListener("click", () => {
+        const pointLabel =
+          row.querySelector(".point-label").value.trim() ||
+          "地点";
+
+        removePointRow(row, pointLabel);
+      });
+
+      row.querySelectorAll("input").forEach((input) => {
+        input.addEventListener("change", refreshAllSelectors);
+        input.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            displayAllPoints();
+          }
+        });
+      });
+
+      pointList.appendChild(row);
+    }
+
+    function readPoints() {
+      const rows = [...pointList.querySelectorAll(".point-row")];
+      const points = [];
+      const errors = [];
+
+      rows.forEach((row, index) => {
+        const label =
+          row.querySelector(".point-label").value.trim() ||
+          `地点${index + 1}`;
+        const format =
+          row.querySelector(".coordinate-format").value;
+        const latitudeText =
+          row.querySelector(".latitude").value.trim();
+        const longitudeText =
+          row.querySelector(".longitude").value.trim();
+
+        if (latitudeText === "" && longitudeText === "") {
+          return;
+        }
+
+        const latitudeInputValue = Number(latitudeText);
+        const longitudeInputValue = Number(longitudeText);
+
+        const latitude =
+          toDecimalDegrees(latitudeInputValue, format);
+        const longitude =
+          toDecimalDegrees(longitudeInputValue, format);
+
+        if (
+          latitudeText === "" ||
+          longitudeText === "" ||
+          !Number.isFinite(latitudeInputValue) ||
+          !Number.isFinite(longitudeInputValue) ||
+          latitude < -90 ||
+          latitude > 90 ||
+          longitude < -180 ||
+          longitude > 180
+        ) {
+          errors.push(`${index + 1}行目`);
+          return;
+        }
+
+        points.push({
+          label,
+          latitude,
+          longitude,
+          format,
+          latitudeInputValue,
+          longitudeInputValue,
+          row
+        });
+      });
+
+      return { points, errors };
+    }
+
+    function populateSelect(select, points, selectedValue) {
+      select.innerHTML = "";
+
+      points.forEach((point, index) => {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = point.label;
+        select.appendChild(option);
+      });
+
+      if (
+        selectedValue !== undefined &&
+        selectedValue !== null &&
+        Number(selectedValue) >= 0 &&
+        Number(selectedValue) < points.length
+      ) {
+        select.value = String(selectedValue);
+      }
+    }
+
+    function createDistancePairRow(fromIndex = 0, toIndex = 1) {
+      const row = document.createElement("div");
+      row.className = "distance-pair-row";
+
+      row.innerHTML = `
+        <div class="field">
+          <label>地点1</label>
+          <select class="from-point"></select>
+        </div>
+
+        <div class="field">
+          <label>地点2</label>
+          <select class="to-point"></select>
+        </div>
+
+        <button type="button" class="danger remove-button">削除</button>
+
+        <div class="result-box pair-result" aria-live="polite">
+          未計算
+        </div>
+      `;
+
+      const { points } = readPoints();
+
+      populateSelect(
+        row.querySelector(".from-point"),
+        points,
+        fromIndex
+      );
+      populateSelect(
+        row.querySelector(".to-point"),
+        points,
+        points.length > 1 ? toIndex : 0
+      );
+
+      row.querySelector(".remove-button").addEventListener("click", () => {
+        row.remove();
+        calculateAllDistances();
+      });
+
+      row.querySelectorAll("select").forEach((select) => {
+        select.addEventListener("change", calculateAllDistances);
+      });
+
+      distancePairList.appendChild(row);
+    }
+
+    function createCircleRow(
+      pointIndex = 0,
+      radius = 1,
+      unit = "km",
+      fillEnabled = true
+    ) {
+      const row = document.createElement("div");
+      row.className = "circle-row";
+
+      row.innerHTML = `
+        <div class="field">
+          <label>中心地点</label>
+          <select class="circle-point"></select>
+        </div>
+
+        <div class="field">
+          <label>半径</label>
+          <input
+            type="number"
+            class="circle-radius"
+            min="0.001"
+            step="any"
+            value="${escapeHtml(radius)}"
+          >
+        </div>
+
+        <div class="field">
+          <label>単位</label>
+          <select class="circle-unit">
+            <option value="m">m</option>
+            <option value="km">km</option>
+          </select>
+        </div>
+
+        <div class="field checkbox-field">
+          <label class="checkbox-label">
+            <input type="checkbox" class="circle-fill">
+            内側を表示
+          </label>
+        </div>
+
+        <button type="button" class="danger remove-button">削除</button>
+
+        <div class="result-box circle-result" aria-live="polite">
+          未表示
+        </div>
+      `;
+
+      const { points } = readPoints();
+
+      populateSelect(
+        row.querySelector(".circle-point"),
+        points,
+        pointIndex
+      );
+
+      row.querySelector(".circle-unit").value = unit;
+      row.querySelector(".circle-fill").checked = fillEnabled;
+
+      row.querySelector(".remove-button").addEventListener("click", () => {
+        row.remove();
+        displayAllCircles();
+      });
+
+      row.querySelectorAll("select, input").forEach((element) => {
+        element.addEventListener("change", displayAllCircles);
+        element.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            displayAllCircles();
+          }
+        });
+      });
+
+      circleList.appendChild(row);
+    }
+
+    function refreshAllSelectors() {
+      const { points } = readPoints();
+
+      distancePairList
+        .querySelectorAll(".distance-pair-row")
+        .forEach((row) => {
+          const from = row.querySelector(".from-point");
+          const to = row.querySelector(".to-point");
+          const previousFrom = from.value;
+          const previousTo = to.value;
+
+          populateSelect(from, points, previousFrom);
+          populateSelect(to, points, previousTo);
+
+          if (
+            points.length > 1 &&
+            from.value === to.value
+          ) {
+            to.value = from.value === "0" ? "1" : "0";
+          }
+        });
+
+      circleList
+        .querySelectorAll(".circle-row")
+        .forEach((row) => {
+          const select = row.querySelector(".circle-point");
+          const previousValue = select.value;
+          populateSelect(select, points, previousValue);
+        });
+    }
+
+    function displayAllPoints(adjustMap = true) {
+      const { points, errors } = readPoints();
+
+      if (errors.length > 0) {
+        setMessage(
+          pointMessage,
+          `${errors.join("、")}の緯度・経度を確認してください。`,
+          "error"
+        );
+        return;
+      }
+
+      markerLayer.clearLayers();
+      refreshAllSelectors();
+
+      if (points.length === 0) {
+        setMessage(
+          pointMessage,
+          "表示できる地点がありません。",
+          "error"
+        );
+        return;
+      }
+
+      const bounds = [];
+
+      points.forEach((point, index) => {
+        const position = [point.latitude, point.longitude];
+        bounds.push(position);
+
+        const latitudeArcseconds =
+          formatNumber(toArcseconds(point.latitude), 6);
+        const longitudeArcseconds =
+          formatNumber(toArcseconds(point.longitude), 6);
+
+        const popupContent = document.createElement("div");
+        popupContent.className = "marker-popup";
+
+        const popupTitle = document.createElement("strong");
+        popupTitle.className = "marker-popup-title";
+        popupTitle.textContent = point.label;
+        popupContent.appendChild(popupTitle);
+
+        const coordinateDetails = document.createElement("div");
+        coordinateDetails.innerHTML =
+          `緯度（10進度）: ${escapeHtml(formatNumber(point.latitude, 10))}<br>` +
+          `経度（10進度）: ${escapeHtml(formatNumber(point.longitude, 10))}<br>` +
+          `緯度（秒）: ${escapeHtml(latitudeArcseconds)}<br>` +
+          `経度（秒）: ${escapeHtml(longitudeArcseconds)}<br>` +
+          `地点番号: ${index + 1}`;
+        popupContent.appendChild(coordinateDetails);
+
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "marker-delete-button";
+        deleteButton.textContent = "この地点を削除";
+        deleteButton.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          map.closePopup();
+          removePointRow(point.row, point.label);
+        });
+        popupContent.appendChild(deleteButton);
+
+        L.marker(position)
+          .addTo(markerLayer)
+          .bindPopup(popupContent);
+      });
+
+      if (adjustMap) {
+        if (bounds.length === 1) {
+          map.setView(bounds[0], 15);
+        } else {
+          map.fitBounds(bounds, {
+            padding: [40, 40],
+            maxZoom: 16
+          });
+        }
+      }
+
+      setMessage(
+        pointMessage,
+        `${points.length}地点を地図に表示しました。`,
+        "success"
+      );
+
+      calculateAllDistances(false);
+      displayAllCircles(false);
+    }
+
+    function toRadians(degrees) {
+      return degrees * Math.PI / 180;
+    }
+
+    function calculateGreatCircleDistance(point1, point2) {
+      const earthRadiusKm = 6371.0088;
+      const latitude1 = toRadians(point1.latitude);
+      const latitude2 = toRadians(point2.latitude);
+      const latitudeDifference =
+        toRadians(point2.latitude - point1.latitude);
+      const longitudeDifference =
+        toRadians(point2.longitude - point1.longitude);
+
+      const a =
+        Math.sin(latitudeDifference / 2) ** 2 +
+        Math.cos(latitude1) *
+        Math.cos(latitude2) *
+        Math.sin(longitudeDifference / 2) ** 2;
+
+      return earthRadiusKm * 2 *
+        Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function formatDistance(distanceKm) {
+      if (distanceKm < 1) {
+        return `${Math.round(distanceKm * 1000).toLocaleString()} m`;
+      }
+
+      if (distanceKm < 100) {
+        return `${distanceKm.toFixed(2)} km`;
+      }
+
+      return `${distanceKm.toFixed(1)} km`;
+    }
+
+    function calculateAllDistances(adjustMap = true) {
+      const { points, errors } = readPoints();
+      const rows = [
+        ...distancePairList.querySelectorAll(".distance-pair-row")
+      ];
+
+      distanceLayer.clearLayers();
+
+      if (errors.length > 0) {
+        setMessage(
+          distanceMessage,
+          "地点の緯度・経度に入力エラーがあります。",
+          "error"
+        );
+        return;
+      }
+
+      if (points.length < 2) {
+        rows.forEach((row) => {
+          const result = row.querySelector(".pair-result");
+          result.textContent =
+            "距離を計算するには2地点以上が必要です。";
+          result.className = "result-box pair-result error";
+        });
+
+        setMessage(
+          distanceMessage,
+          "距離を計算するには2地点以上を入力してください。",
+          "error"
+        );
+        return;
+      }
+
+      if (rows.length === 0) {
+        setMessage(
+          distanceMessage,
+          "距離の組み合わせがありません。",
+          "error"
+        );
+        return;
+      }
+
+      refreshAllSelectors();
+
+      const bounds = [];
+      let validCount = 0;
+      let totalDistanceKm = 0;
+
+      rows.forEach((row, index) => {
+        const fromIndex = Number(
+          row.querySelector(".from-point").value
+        );
+        const toIndex = Number(
+          row.querySelector(".to-point").value
+        );
+        const result = row.querySelector(".pair-result");
+
+        if (
+          !points[fromIndex] ||
+          !points[toIndex] ||
+          fromIndex === toIndex
+        ) {
+          result.textContent =
+            "異なる2地点を選択してください。";
+          result.className = "result-box pair-result error";
+          result.style.borderLeft = "";
+          return;
+        }
+
+        const fromPoint = points[fromIndex];
+        const toPoint = points[toIndex];
+        const distanceKm =
+          calculateGreatCircleDistance(fromPoint, toPoint);
+        const formattedDistance = formatDistance(distanceKm);
+        const color = colors[index % colors.length];
+
+        const fromPosition = [
+          fromPoint.latitude,
+          fromPoint.longitude
+        ];
+        const toPosition = [
+          toPoint.latitude,
+          toPoint.longitude
+        ];
+
+        const line = L.polyline(
+          [fromPosition, toPosition],
+          {
+            color,
+            weight: 4,
+            opacity: 0.85,
+            dashArray: "8, 8"
+          }
+        )
+          .addTo(distanceLayer)
+          .bindPopup(
+            `<strong>${escapeHtml(fromPoint.label)} ↔ ` +
+            `${escapeHtml(toPoint.label)}</strong><br>` +
+            `距離: ${escapeHtml(formattedDistance)}`
+          );
+
+        const midpoint = [
+          (fromPoint.latitude + toPoint.latitude) / 2,
+          (fromPoint.longitude + toPoint.longitude) / 2
+        ];
+
+        L.marker(midpoint, {
+          interactive: false,
+          icon: L.divIcon({
+            className: "",
+            html:
+              `<div class="distance-label" ` +
+              `style="background:${color}">` +
+              `${escapeHtml(formattedDistance)}</div>`,
+            iconSize: [96, 24],
+            iconAnchor: [48, 12]
+          })
+        }).addTo(distanceLayer);
+
+        result.textContent =
+          `${fromPoint.label} から ${toPoint.label}: ` +
+          formattedDistance;
+        result.className = "result-box pair-result";
+        result.style.borderLeft = `6px solid ${color}`;
+
+        bounds.push(fromPosition, toPosition);
+        validCount += 1;
+        totalDistanceKm += distanceKm;
+      });
+
+      if (adjustMap && bounds.length > 0) {
+        map.fitBounds(bounds, {
+          padding: [60, 60],
+          maxZoom: 16
+        });
+      }
+
+      if (validCount > 0) {
+        setMessage(
+          distanceMessage,
+          `${validCount}組の距離を表示しました。合計は ` +
+          `${formatDistance(totalDistanceKm)} です。`,
+          "success"
+        );
+      }
+    }
+
+    function displayAllCircles(adjustMap = true) {
+      const { points, errors } = readPoints();
+      const rows = [
+        ...circleList.querySelectorAll(".circle-row")
+      ];
+
+      circleLayer.clearLayers();
+
+      if (errors.length > 0) {
+        setMessage(
+          circleMessage,
+          "地点の緯度・経度に入力エラーがあります。",
+          "error"
+        );
+        return;
+      }
+
+      if (points.length === 0) {
+        setMessage(
+          circleMessage,
+          "円を表示する中心地点がありません。",
+          "error"
+        );
+        return;
+      }
+
+      if (rows.length === 0) {
+        setMessage(
+          circleMessage,
+          "表示する円がありません。",
+          "error"
+        );
+        return;
+      }
+
+      refreshAllSelectors();
+
+      const circleBounds = [];
+      let validCount = 0;
+
+      rows.forEach((row, index) => {
+        const pointIndex = Number(
+          row.querySelector(".circle-point").value
+        );
+        const radiusValue = Number(
+          row.querySelector(".circle-radius").value
+        );
+        const unit =
+          row.querySelector(".circle-unit").value;
+        const fillEnabled =
+          row.querySelector(".circle-fill").checked;
+        const result =
+          row.querySelector(".circle-result");
+
+        if (!points[pointIndex]) {
+          result.textContent =
+            "中心地点を選択してください。";
+          result.className =
+            "result-box circle-result error";
+          result.style.borderLeft = "";
+          return;
+        }
+
+        if (
+          !Number.isFinite(radiusValue) ||
+          radiusValue <= 0
+        ) {
+          result.textContent =
+            "0より大きい半径を入力してください。";
+          result.className =
+            "result-box circle-result error";
+          result.style.borderLeft = "";
+          return;
+        }
+
+        const point = points[pointIndex];
+        const radiusMeters =
+          unit === "km"
+            ? radiusValue * 1000
+            : radiusValue;
+        const color = colors[index % colors.length];
+
+        const circle = L.circle(
+          [point.latitude, point.longitude],
+          {
+            radius: radiusMeters,
+            color,
+            fill: fillEnabled,
+            fillColor: color,
+            fillOpacity: fillEnabled ? 0.15 : 0,
+            weight: 3
+          }
+        )
+          .addTo(circleLayer)
+          .bindPopup(
+            `<strong>${escapeHtml(point.label)}</strong><br>` +
+            `半径: ${escapeHtml(radiusValue)} ` +
+            `${escapeHtml(unit)}<br>` +
+            `内側: ${fillEnabled ? "表示" : "非表示"}`
+          );
+
+        result.textContent =
+          `${point.label}を中心に半径 ` +
+          `${radiusValue} ${unit}` +
+          `（内側: ${fillEnabled ? "表示" : "非表示"}）`;
+        result.className = "result-box circle-result";
+        result.style.borderLeft = `6px solid ${color}`;
+
+        circleBounds.push(circle.getBounds());
+        validCount += 1;
+      });
+
+      if (adjustMap && circleBounds.length > 0) {
+        const combinedBounds = L.latLngBounds(
+          circleBounds[0].getSouthWest(),
+          circleBounds[0].getNorthEast()
+        );
+
+        for (let index = 1; index < circleBounds.length; index += 1) {
+          combinedBounds.extend(circleBounds[index]);
+        }
+
+        map.fitBounds(combinedBounds, {
+          padding: [50, 50],
+          maxZoom: 16
+        });
+      }
+
+      if (validCount > 0) {
+        setMessage(
+          circleMessage,
+          `${validCount}個の円を地図に表示しました。`,
+          "success"
+        );
+      }
+    }
+
+    document
+      .getElementById("addPointButton")
+      .addEventListener("click", () => {
+        createPointRow();
+        refreshAllSelectors();
+        setMessage(
+          pointMessage,
+          "地点の入力欄を追加しました。",
+          "success"
+        );
+      });
+
+    document
+      .getElementById("showPointsButton")
+      .addEventListener("click", () => {
+        displayAllPoints(true);
+      });
+
+    document
+      .getElementById("clearPointsButton")
+      .addEventListener("click", () => {
+        pointList.innerHTML = "";
+        markerLayer.clearLayers();
+        distanceLayer.clearLayers();
+        circleLayer.clearLayers();
+        pointSequence = 1;
+
+        createPointRow();
+        refreshAllSelectors();
+
+        setMessage(
+          pointMessage,
+          "すべての地点を削除しました。",
+          "success"
+        );
+        setMessage(distanceMessage, "");
+        setMessage(circleMessage, "");
+      });
+
+    document
+      .getElementById("addPairButton")
+      .addEventListener("click", () => {
+        const { points } = readPoints();
+
+        createDistancePairRow(
+          0,
+          points.length > 1 ? 1 : 0
+        );
+
+        if (points.length >= 2) {
+          calculateAllDistances();
+        }
+      });
+
+    document
+      .getElementById("calculateAllButton")
+      .addEventListener("click", () => {
+        calculateAllDistances(true);
+      });
+
+    document
+      .getElementById("clearPairsButton")
+      .addEventListener("click", () => {
+        distancePairList.innerHTML = "";
+        distanceLayer.clearLayers();
+
+        setMessage(
+          distanceMessage,
+          "すべての距離の組み合わせを削除しました。",
+          "success"
+        );
+      });
+
+    document
+      .getElementById("addCircleButton")
+      .addEventListener("click", () => {
+        createCircleRow(0, 1, "km", true);
+        displayAllCircles();
+      });
+
+    document
+      .getElementById("showCirclesButton")
+      .addEventListener("click", () => {
+        displayAllCircles(true);
+      });
+
+    document
+      .getElementById("clearCirclesButton")
+      .addEventListener("click", () => {
+        circleList.innerHTML = "";
+        circleLayer.clearLayers();
+
+        setMessage(
+          circleMessage,
+          "すべての円を削除しました。",
+          "success"
+        );
+      });
+
+    map.on("click", (event) => {
+      const latitude =
+        Number(event.latlng.lat.toFixed(6));
+      const longitude =
+        Number(event.latlng.lng.toFixed(6));
+
+      createPointRow(
+        latitude,
+        longitude,
+        "",
+        "degrees"
+      );
+
+      displayAllPoints(true);
+    });
+
+    const appLayout =
+      document.querySelector(".app-layout");
+    const leftPanel =
+      document.querySelector(".left-controls");
+    const rightPanel =
+      document.querySelector(".right-controls");
+    const leftResizeHandle =
+      document.getElementById("leftResizeHandle");
+    const rightResizeHandle =
+      document.getElementById("rightResizeHandle");
+
+    const MIN_LEFT_WIDTH = 320;
+    const MIN_RIGHT_WIDTH = 360;
+    const MIN_MAP_WIDTH = 320;
+    const HANDLE_TOTAL_WIDTH = 20;
+
+    function getPanelWidth(panel) {
+      return panel.getBoundingClientRect().width;
+    }
+
+    function getMaximumLeftWidth() {
+      return Math.max(
+        MIN_LEFT_WIDTH,
+        appLayout.clientWidth -
+          getPanelWidth(rightPanel) -
+          MIN_MAP_WIDTH -
+          HANDLE_TOTAL_WIDTH
+      );
+    }
+
+    function getMaximumRightWidth() {
+      return Math.max(
+        MIN_RIGHT_WIDTH,
+        appLayout.clientWidth -
+          getPanelWidth(leftPanel) -
+          MIN_MAP_WIDTH -
+          HANDLE_TOTAL_WIDTH
+      );
+    }
+
+    function updateHandleAria(handle, value, minimum, maximum) {
+      handle.setAttribute(
+        "aria-valuenow",
+        String(Math.round(value))
+      );
+      handle.setAttribute(
+        "aria-valuemin",
+        String(minimum)
+      );
+      handle.setAttribute(
+        "aria-valuemax",
+        String(Math.round(maximum))
+      );
+    }
+
+    function setLeftPanelWidth(width, save = true) {
+      const maximum = getMaximumLeftWidth();
+      const adjusted = Math.min(
+        Math.max(width, MIN_LEFT_WIDTH),
+        maximum
+      );
+
+      appLayout.style.setProperty(
+        "--left-panel-width",
+        `${adjusted}px`
+      );
+
+      updateHandleAria(
+        leftResizeHandle,
+        adjusted,
+        MIN_LEFT_WIDTH,
+        maximum
+      );
+
+      if (save) {
+        localStorage.setItem(
+          "mapLeftPanelWidthReversed",
+          String(adjusted)
+        );
+      }
+
+      window.setTimeout(() => map.invalidateSize(), 0);
+    }
+
+    function setRightPanelWidth(width, save = true) {
+      const maximum = getMaximumRightWidth();
+      const adjusted = Math.min(
+        Math.max(width, MIN_RIGHT_WIDTH),
+        maximum
+      );
+
+      appLayout.style.setProperty(
+        "--right-panel-width",
+        `${adjusted}px`
+      );
+
+      updateHandleAria(
+        rightResizeHandle,
+        adjusted,
+        MIN_RIGHT_WIDTH,
+        maximum
+      );
+
+      if (save) {
+        localStorage.setItem(
+          "mapRightPanelWidthReversed",
+          String(adjusted)
+        );
+      }
+
+      window.setTimeout(() => map.invalidateSize(), 0);
+    }
+
+    const storedLeftWidth =
+      Number(localStorage.getItem("mapLeftPanelWidthReversed"));
+    const storedRightWidth =
+      Number(localStorage.getItem("mapRightPanelWidthReversed"));
+
+    setRightPanelWidth(
+      Number.isFinite(storedRightWidth)
+        ? storedRightWidth
+        : 430,
+      false
+    );
+
+    setLeftPanelWidth(
+      Number.isFinite(storedLeftWidth)
+        ? storedLeftWidth
+        : 500,
+      false
+    );
+
+    function setupResizeHandle({
+      handle,
+      panel,
+      direction,
+      setWidth
+    }) {
+      let startX = 0;
+      let startWidth = 0;
+
+      handle.addEventListener("pointerdown", (event) => {
+        if (window.innerWidth <= 1100) return;
+
+        startX = event.clientX;
+        startWidth = getPanelWidth(panel);
+
+        handle.setPointerCapture(event.pointerId);
+        handle.classList.add("is-dragging");
+        document.body.classList.add("is-resizing");
+      });
+
+      handle.addEventListener("pointermove", (event) => {
+        if (!handle.hasPointerCapture(event.pointerId)) {
+          return;
+        }
+
+        const delta = event.clientX - startX;
+        const nextWidth =
+          direction === "left"
+            ? startWidth + delta
+            : startWidth - delta;
+
+        setWidth(nextWidth, false);
+      });
+
+      function finishResize(event) {
+        if (!handle.hasPointerCapture(event.pointerId)) {
+          return;
+        }
+
+        handle.releasePointerCapture(event.pointerId);
+        handle.classList.remove("is-dragging");
+        document.body.classList.remove("is-resizing");
+
+        setWidth(getPanelWidth(panel), true);
+      }
+
+      handle.addEventListener("pointerup", finishResize);
+      handle.addEventListener("pointercancel", finishResize);
+
+      handle.addEventListener("keydown", (event) => {
+        if (window.innerWidth <= 1100) return;
+
+        const currentWidth = getPanelWidth(panel);
+        const step = event.shiftKey ? 50 : 10;
+
+        if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          setWidth(
+            direction === "left"
+              ? currentWidth - step
+              : currentWidth + step
+          );
+        }
+
+        if (event.key === "ArrowRight") {
+          event.preventDefault();
+          setWidth(
+            direction === "left"
+              ? currentWidth + step
+              : currentWidth - step
+          );
+        }
+
+        if (event.key === "Home") {
+          event.preventDefault();
+          setWidth(
+            direction === "left"
+              ? MIN_LEFT_WIDTH
+              : MIN_RIGHT_WIDTH
+          );
+        }
+
+        if (event.key === "End") {
+          event.preventDefault();
+          setWidth(
+            direction === "left"
+              ? getMaximumLeftWidth()
+              : getMaximumRightWidth()
+          );
+        }
+      });
+    }
+
+    setupResizeHandle({
+      handle: leftResizeHandle,
+      panel: leftPanel,
+      direction: "left",
+      setWidth: setLeftPanelWidth
+    });
+
+    setupResizeHandle({
+      handle: rightResizeHandle,
+      panel: rightPanel,
+      direction: "right",
+      setWidth: setRightPanelWidth
+    });
+
+    window.addEventListener("resize", () => {
+      if (window.innerWidth > 1100) {
+        setRightPanelWidth(
+          getPanelWidth(rightPanel),
+          false
+        );
+        setLeftPanelWidth(
+          getPanelWidth(leftPanel),
+          false
+        );
+      }
+
+      window.setTimeout(() => {
+        map.invalidateSize();
+      }, 0);
+    });
+
+    createPointRow(
+      35.681236,
+      139.767125,
+      "東京駅",
+      "degrees"
+    );
+    createPointRow(
+      35.658584,
+      139.745431,
+      "東京タワー",
+      "degrees"
+    );
+    createPointRow(
+      35.710063,
+      139.8107,
+      "東京スカイツリー",
+      "degrees"
+    );
+
+    createDistancePairRow(0, 1);
+    createDistancePairRow(1, 2);
+    createCircleRow(0, 1, "km", true);
+
+    displayAllPoints(true);
+  </script>
+</body>
+</html>
