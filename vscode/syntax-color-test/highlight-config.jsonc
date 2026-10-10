@@ -1,0 +1,152 @@
+{
+  // 既存のテーマ・UIを維持する配色案。ユーザーsettings.jsonへマージする。
+  "editor.semanticHighlighting.enabled": true,
+  "editor.semanticTokenColorCustomizations": {
+    "rules": {
+      "*": {"bold": false, "italic": false},
+      // 型名
+      "type": "#1290C3",
+      "class": "#1290C3",
+      "struct": "#1290C3",
+      "interface": "#80F2F6",
+      "enum": "#CC81BA",
+      "typeParameter": "#B166DA",
+      // 関数・メソッド
+      "function": "#A7EC21",
+      "method": "#A7EC21",
+      "function.declaration": {"foreground": "#1EB540", "bold": false},
+      "method.declaration": {"foreground": "#1EB540", "bold": false},
+      "function.static": {"foreground": "#96EC3F", "bold": true},
+      "method.static": {"foreground": "#96EC3F", "bold": true},
+      "function.static.declaration": {"foreground": "#1EB540", "bold": false},
+      "method.static.declaration": {"foreground": "#1EB540", "bold": false},
+      // 変数・プロパティ
+      "variable": "#F3EC79",
+      "variable.declaration": "#F2F200",
+      "variable.readonly": "#F3EC79",
+      "variable.readonly.declaration": "#F2F200",
+      "parameter": "#79ABFF",
+      "property": "#66E1F8",
+      "property.readonly": "#66E1F8",
+      "property.static": {"foreground": "#8DDAF8", "bold": true},
+      "property.static.readonly": {"foreground": "#8DDAF8", "bold": true},
+      "variable.static": {"foreground": "#8DDAF8", "bold": true},
+      "variable.static.declaration": {"foreground": "#8DDAF8", "bold": true},
+      "variable.static.readonly": {"foreground": "#8DDAF8", "bold": true},
+      "variable.static.readonly.declaration": {"foreground": "#8DDAF8", "bold": true},
+      "enumMember": {"foreground": "#8DDAF8", "bold": true},
+      // リテラル・キーワード
+      "keyword": "#CC6C1D",
+      "operator": "#F9FAF4",
+      "string": "#17C6A3",
+      "number": "#6897BB",
+      "comment": "#808080",
+      "decorator": "#A0A0A0",
+      "keyword.documentation": {"foreground": "#9A8C7C", "bold": true},
+      // Java拡張の分類
+      "annotation:java": "#A0A0A0",
+      "*.typeArgument:java": "#B166DA",
+      "*.constructor:java": "#A7EC21",
+      "*.constructor.declaration:java": {"foreground": "#1EB540", "bold": false},
+      // コメント内の参照（具体的な修飾子への補正も維持）
+      "*.documentation": {"foreground": "#808080", "bold": false, "italic": false},
+      "namespace.documentation": {"foreground": "#808080", "bold": false},
+      "type.documentation": {"foreground": "#808080", "bold": false},
+      "class.documentation": {"foreground": "#808080", "bold": false},
+      "interface.documentation": {"foreground": "#808080", "bold": false},
+      "enum.documentation": {"foreground": "#808080", "bold": false},
+      "typeParameter.documentation": {"foreground": "#808080", "bold": false},
+      "parameter.documentation": {"foreground": "#808080", "bold": false},
+      "function.documentation": {"foreground": "#808080", "bold": false},
+      "function.static.documentation": {"foreground": "#808080", "bold": false},
+      "method.documentation": {"foreground": "#808080", "bold": false},
+      "method.static.documentation": {"foreground": "#808080", "bold": false},
+      "variable.documentation": {"foreground": "#808080", "bold": false},
+      "variable.declaration.documentation": {"foreground": "#808080", "bold": false},
+      "variable.readonly.documentation": {"foreground": "#808080", "bold": false},
+      "variable.readonly.declaration.documentation": {"foreground": "#808080", "bold": false},
+      "variable.static.documentation": {"foreground": "#808080", "bold": false},
+      "variable.static.readonly.documentation": {"foreground": "#808080", "bold": false},
+      "variable.static.readonly.declaration.documentation": {"foreground": "#808080", "bold": false},
+      "property.documentation": {"foreground": "#808080", "bold": false},
+      "property.readonly.documentation": {"foreground": "#808080", "bold": false},
+      "property.static.documentation": {"foreground": "#808080", "bold": false},
+      "property.static.readonly.documentation": {"foreground": "#808080", "bold": false},
+      "enumMember.documentation": {"foreground": "#808080", "bold": false}
+    }
+  },
+  "editor.tokenColorCustomizations": {
+    "textMateRules": [
+      // 同じ色・装飾の隣接ルールだけを統合。スコープの順序と優先順位を維持。
+      { "name": "Comments", "scope": ["comment"], "settings": {"foreground": "#808080", "fontStyle": ""} },
+      { "name": "Strings", "scope": ["string", "punctuation.definition.string"], "settings": {"foreground": "#17C6A3", "fontStyle": ""} },
+      { "name": "Numbers", "scope": ["constant.numeric"], "settings": {"foreground": "#6897BB", "fontStyle": ""} },
+      { "name": "Keywords modifiers and primitive types", "scope": ["keyword", "storage.modifier", "storage.type"], "settings": {"foreground": "#CC6C1D", "fontStyle": ""} },
+      { "name": "Symbol operators and arrows", "scope": ["keyword.operator", "storage.type.function.arrow"], "settings": {"foreground": "#F9FAF4", "fontStyle": ""} },
+      { "name": "Punctuation", "scope": ["punctuation"], "settings": {"foreground": "#E6E6FA", "fontStyle": ""} },
+      { "name": "Class and type names", "scope": ["entity.name.type", "support.type", "support.class", "storage.type.java"], "settings": {"foreground": "#1290C3", "fontStyle": ""} },
+      { "name": "Interfaces", "scope": ["entity.name.type.interface"], "settings": {"foreground": "#80F2F6", "fontStyle": ""} },
+      { "name": "Enum types", "scope": ["entity.name.type.enum"], "settings": {"foreground": "#CC81BA", "fontStyle": ""} },
+      { "name": "Type parameters", "scope": ["entity.name.type.parameter"], "settings": {"foreground": "#B166DA", "fontStyle": ""} },
+      { "name": "Function and method names fallback", "scope": ["entity.name.function", "support.function"], "settings": {"foreground": "#A7EC21", "fontStyle": ""} },
+      { "name": "Method and constructor declaration fallback", "scope": [
+          "entity.name.function.java", "meta.method.declaration.js storage.type.js",
+          "meta.method.declaration.ts storage.type.ts"
+        ], "settings": {"foreground": "#1EB540", "fontStyle": ""} },
+      { "name": "Local variables including readonly bindings", "scope": ["variable.other"], "settings": {"foreground": "#F3EC79", "fontStyle": ""} },
+      { "name": "Local declaration fallback", "scope": ["variable.other.definition"], "settings": {"foreground": "#F2F200", "fontStyle": ""} },
+      { "name": "Properties", "scope": [
+          "variable.other.property", "variable.other.object.property", "variable.other.constant.property",
+          "variable.other.constant.object.property"
+        ], "settings": {"foreground": "#66E1F8", "fontStyle": ""} },
+      { "name": "Parameters", "scope": ["variable.parameter"], "settings": {"foreground": "#79ABFF", "fontStyle": ""} },
+      { "name": "Enum members", "scope": ["variable.other.enummember", "constant.other.enum"], "settings": {"foreground": "#8DDAF8", "fontStyle": "bold"} },
+      { "name": "Boolean null and word operators", "scope": [
+          "constant.language.boolean", "constant.language.null", "constant.language.java", "keyword.operator.expression",
+          "keyword.operator.new"
+        ], "settings": {"foreground": "#CC6C1D", "fontStyle": ""} },
+      { "name": "Annotations and decorators", "scope": ["entity.name.decorator", "storage.type.annotation", "punctuation.definition.annotation"], "settings": {"foreground": "#A0A0A0", "fontStyle": ""} },
+      { "name": "Documentation tags", "scope": ["keyword.other.documentation", "entity.other.attribute-name.jsdoc"], "settings": {"foreground": "#9A8C7C", "fontStyle": "bold"} },
+      { "name": "Keyword overrides", "scope": [
+          "source.java keyword.control", "source.js keyword.control", "source.ts keyword.control",
+          "source.java storage.modifier", "source.js storage.modifier", "source.ts storage.modifier",
+          "source.java constant.language.java", "source.js constant.language.boolean", "source.ts constant.language.boolean",
+          "source.js constant.language.null", "source.ts constant.language.null", "source.js keyword.operator.new",
+          "source.ts keyword.operator.new", "source.js keyword.operator.expression", "source.ts keyword.operator.expression",
+          "storage.type.primitive", "storage.type.builtin", "support.type.primitive",
+          "source.java storage.type.primitive.java", "source.java storage.type.primitive.array.java",
+          "source.java meta.method.return-type.java storage.type.primitive.java",
+          "source.java meta.method.parameters.java storage.type.primitive.java", "source.js support.type.primitive.js",
+          "source.ts support.type.primitive.ts", "source.java variable.language.this.java",
+          "source.java variable.language.java", "source.js variable.language.this.js", "source.js variable.language.super.js",
+          "source.ts variable.language.this.ts", "source.ts variable.language.super.ts",
+          "source.java keyword.operator.instanceof.java", "source.js keyword.operator.expression.instanceof.js",
+          "source.ts keyword.operator.expression.instanceof.ts", "source.js support.type.builtin.js",
+          "source.ts support.type.builtin.ts"
+        ], "settings": {"foreground": "#CC6C1D", "fontStyle": ""} },
+      { "name": "Documentation content stays comment gray", "scope": [
+          "comment variable", "comment variable.parameter", "source.java comment variable.language.this.java",
+          "source.java comment variable.language.java", "source.js comment variable.language.this.js",
+          "source.js comment variable.language.super.js", "source.ts comment variable.language.this.ts",
+          "source.ts comment variable.language.super.ts", "comment variable.other", "comment variable.other.definition",
+          "comment variable.other.constant", "comment variable.other.enummember", "comment variable.other.property",
+          "comment variable.other.object.property", "comment variable.other.constant.property",
+          "comment variable.other.constant.object.property", "comment entity.name.type", "comment entity.name.type.class",
+          "comment entity.name.type.interface", "comment entity.name.type.enum", "comment entity.name.type.parameter",
+          "comment entity.name.function", "comment entity.name.function.java", "comment entity.name.decorator",
+          "comment support.type", "comment support.class", "comment support.function",
+          "source.js comment support.type.primitive.js", "source.ts comment support.type.primitive.ts",
+          "source.js comment support.type.builtin.js", "source.ts comment support.type.builtin.ts", "comment storage.type",
+          "comment storage.type.java", "comment storage.type.annotation", "source.java comment storage.type.primitive.java",
+          "comment storage.modifier", "comment constant.numeric", "comment constant.language", "comment string",
+          "comment keyword", "comment keyword.operator", "source.java comment keyword.operator.instanceof.java",
+          "source.js comment keyword.operator.expression.instanceof.js",
+          "source.ts comment keyword.operator.expression.instanceof.ts", "comment punctuation",
+          "comment punctuation.definition.string", "comment punctuation.definition.annotation"
+        ], "settings": {"foreground": "#808080", "fontStyle": ""} },
+      { "name": "Documentation tags keep muted bold color", "scope": [
+          "comment keyword.other.documentation", "comment entity.other.attribute-name.jsdoc"
+        ], "settings": {"foreground": "#9A8C7C", "fontStyle": "bold"} }
+    ]
+  }
+}
